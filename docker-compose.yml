@@ -107,9 +107,9 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 15
       REFRESH_TOKEN_EXPIRE_DAYS: 7
       
-      # Admin Setup (CRITICAL - change in .env)
+      # Admin Setup (CRITICAL - set strong values in .env)
       ADMIN_EMAIL: ${ADMIN_EMAIL}
-      # ADMIN_PASSWORD is auto-generated (do not hardcode)
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}  # REQUIRED - Generate: python -c "import secrets; print(secrets.token_urlsafe(16))"
       
       # Frontend Configuration
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
