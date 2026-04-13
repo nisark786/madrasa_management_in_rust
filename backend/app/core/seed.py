@@ -253,10 +253,21 @@ async def seed_database(db: AsyncSession):
     admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.getenv("ADMIN_PASSWORD")
     
-    if not admin_password:
+    # SECURITY FIX: Only accept non-default admin passwords
+    if not admin_password or admin_password == "change-me-in-production":
         raise ValueError(
-            "ADMIN_PASSWORD environment variable is required for initial seed. "
-            "Set it before starting the application."
+            "❌ SECURITY ERROR: ADMIN_PASSWORD must be set to a strong value.\n"
+            "\n"
+            "STEPS TO FIX:\n"
+            "  1. Generate a strong password:\n"
+            "     python -c \"import secrets; print(secrets.token_urlsafe(16))\"\n"
+            "\n"
+            "  2. Set ADMIN_PASSWORD in your .env file with the generated password\n"
+            "\n"
+            "  3. Restart the application\n"
+            "\n"
+            "IMPORTANT: Store this password securely (password manager, etc).\n"
+            "The password will NOT be printed or logged after first setup.\n"
         )
     
     result = await db.execute(select(User).where(User.email == admin_email))
@@ -274,6 +285,8 @@ async def seed_database(db: AsyncSession):
         await db.flush()
         db.add(UserRole(user_id=admin_user.id, role_id=admin_role.id))
         print(f"  ✅ Admin user created: {admin_email}")
+        print(f"  ⚠️  Password was set from ADMIN_PASSWORD environment variable")
+        print(f"  ⚠️  For security, this password will NEVER be printed again")
 
     # ── 5. Seed widgets (linked to permissions) ────────────────────────────────
     for wdata in SYSTEM_WIDGETS:
