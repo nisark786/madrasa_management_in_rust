@@ -11,12 +11,14 @@ import {
   User as UserIcon,
   FileText,
   HardDrive,
-  Layout
+  Layout,
+  Upload
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/dashboard',           label: 'Dashboard',    icon: Home, permission: null },
   { to: '/admin/students',      label: 'Students',     icon: GraduationCap, permission: 'students:read' },
+  { to: '/admin/bulk-operations', label: 'Bulk Import/Export', icon: Upload, permission: 'students:write' },
   { to: '/admin/users',         label: 'Users',        icon: Users, permission: 'admin:manage_users' },
   { to: '/admin/roles',         label: 'Roles',        icon: ShieldCheck, permission: 'admin:manage_roles' },
   { to: '/admin/role-templates', label: 'Role Templates', icon: Layout, permission: 'admin:manage_roles' },

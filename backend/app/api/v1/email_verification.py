@@ -1,9 +1,10 @@
 """Email verification endpoints."""
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user
+from app.core.database import get_db
+from app.dependencies.auth import get_current_user
 from app.models.user import User
 from app.core.email_verification_service import EmailVerificationService
 from app.core.config import settings
@@ -26,7 +27,7 @@ class ResendVerificationEmailRequest:
 @router.post("/verify-email/{token}")
 async def verify_email(
     token: str,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Verify user's email address using a verification token.
@@ -77,7 +78,7 @@ async def verify_email(
 @router.post("/resend-verification-email")
 async def resend_verification_email(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Resend email verification email to current user.
@@ -135,7 +136,7 @@ async def resend_verification_email(
 @router.get("/email-status")
 async def get_email_status(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Get current user's email verification status.

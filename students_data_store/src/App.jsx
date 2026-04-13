@@ -20,6 +20,7 @@ const RolesPage   = lazy(() => import('./pages/RolesPage'));
 const RoleTemplatesPage = lazy(() => import('./pages/RoleTemplatesPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentReport = lazy(() => import('./pages/StudentReport'));
+const BulkOperationsPage = lazy(() => import('./pages/BulkOperationsPage'));
 const EmailHistoryPage = lazy(() => import('./pages/EmailHistoryPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const TwoFactorSetupPage = lazy(() => import('./pages/TwoFactorSetupPage'));
@@ -118,6 +119,16 @@ export default function App() {
                 <ProtectedRoute permission="students:read">
                   <RouteErrorBoundary routeName="Student Report">
                     <StudentReport />
+                  </RouteErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/bulk-operations"
+              element={
+                <ProtectedRoute permission="students:write">
+                  <RouteErrorBoundary routeName="Bulk Operations">
+                    <BulkOperationsPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }
