@@ -1,67 +1,242 @@
+# Docker Compose Configuration for Students Data Store
+# Local Development Setup: Frontend (npm) + Backend & Redis (Docker)
+# 
+# Services:
+# - redis (6379): Cache & session store with persistence enabled
+# - backend (8000): FastAPI application with async workers
+# - jaeger (16686): Distributed tracing for performance monitoring
+# - caddy (80/443): Reverse proxy for load balancing
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose down                # Stop all services
+#   docker-compose logs -f backend     # View backend logs
+#   docker-compose exec backend bash   # Shell access
+
+version: '3.8'
 
 services:
+  # ═══════════════════════════════════════════════════════════
+  # Redis Cache & Session Store
+  # ═══════════════════════════════════════════════════════════
   redis:
     image: redis:7-alpine
     container_name: students_redis
     ports:
       - "6379:6379"
     restart: unless-stopped
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: students_caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    
+    # CRITICAL FIX #4: Enable persistence to prevent data loss on restart
+    command: redis-server 
+      --appendonly yes 
+      --appendfsync everysec 
+      --appendfilename "appendonly.aof"
+      --loglevel warning
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru  # Evict LRU items when full
+    
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
+      # Persist Redis data
+      - redis_data:/data
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    
+    networks:
+      - students_network
 
+  # ═══════════════════════════════════════════════════════════
+  # PostgreSQL Database (Optional - use external DB if preferred)
+  # ═══════════════════════════════════════════════════════════
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: students_postgres
+  #   environment:
+  #     POSTGRES_DB: students_db
+  #     POSTGRES_USER: ${DB_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ═══════════════════════════════════════════════════════════
+  # FastAPI Backend Application
+  # ═══════════════════════════════════════════════════════════
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      # Multi-stage build for production optimization
+      args:
+        PYTHON_VERSION: "3.12"
+    
     container_name: students_backend
+    
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Main API port
+    
+    # Mount source code for auto-reload in development
     volumes:
       - ./backend:/app
+      - backend_logs:/app/logs
+    
+    # Environment variables - READ FROM .env FILE
     environment:
+      # Database (REQUIRED - set in .env)
       DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      SECRET_KEY: ${SECRET_KEY}
+      
+      # Redis Cache
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_MAX_CONNECTIONS: 20
+      
+      # Security (CRITICAL - use strong values in .env)
+      SECRET_KEY: ${SECRET_KEY}  # Generate: python -c "import secrets; print(secrets.token_urlsafe(32))"
       ALGORITHM: HS256
+      
+      # JWT Tokens
       ACCESS_TOKEN_EXPIRE_MINUTES: 15
       REFRESH_TOKEN_EXPIRE_DAYS: 7
+      
+      # Admin Setup (CRITICAL - change in .env)
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      # ADMIN_PASSWORD is auto-generated (do not hardcode)
+      
+      # Frontend Configuration
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      
+      # Rate Limiting
       LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-5}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-60}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-False}
+      
+      # Tracing
+      JAEGER_ENABLED: ${JAEGER_ENABLED:-True}
+      JAEGER_HOST: ${JAEGER_HOST:-jaeger}
+      JAEGER_PORT: ${JAEGER_PORT:-6831}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      
+      # Email (optional)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@studentsds.com}
+      
+      # Google Drive (optional)
+      GOOGLE_DRIVE_ENABLED: ${GOOGLE_DRIVE_ENABLED:-False}
+    
+    # Health check for container orchestration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
     depends_on:
-      - redis
-      - jaeger
+      redis:
+        condition: service_healthy
+      # postgres:  # Uncomment if using local PostgreSQL
+      #   condition: service_healthy
+      jaeger:
+        condition: service_started
+    
     restart: unless-stopped
+    
+    networks:
+      - students_network
 
+  # ═══════════════════════════════════════════════════════════
+  # Jaeger Distributed Tracing
+  # ═══════════════════════════════════════════════════════════
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: students_jaeger
+    
     ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
+      - "16686:16686"    # Jaeger UI (http://localhost:16686)
+      - "4317:4317"      # OTLP gRPC receiver
+      - "4318:4318"      # OTLP HTTP receiver
+      - "6831:6831/udp"  # Jaeger agent (UDP)
+    
     environment:
-      - COLLECTOR_OTLP_HTTP_HOST_PORT=:4318
-      - COLLECTOR_OTLP_HTTP_ALLOWED_ORIGINS=http://localhost:5173
-      - COLLECTOR_OTLP_HTTP_ALLOWED_HEADERS=content-type,x-requested-with
+      # OTLP HTTP Configuration
+      COLLECTOR_OTLP_HTTP_HOST_PORT: :4318
+      COLLECTOR_OTLP_HTTP_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8000
+      COLLECTOR_OTLP_HTTP_ALLOWED_HEADERS: content-type,x-requested-with,authorization
+      
+      # Memory storage (suitable for local development)
+      MEMORY_MAX_TRACES: 10000
+    
     restart: unless-stopped
+    
+    networks:
+      - students_network
 
+  # ═══════════════════════════════════════════════════════════
+  # Caddy Reverse Proxy (Optional for local dev)
+  # ═══════════════════════════════════════════════════════════
+  caddy:
+    image: caddy:2-alpine
+    container_name: students_caddy
+    
+    ports:
+      - "80:80"          # HTTP
+      - "443:443"        # HTTPS
+    
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    
+    depends_on:
+      backend:
+        condition: service_healthy
+    
+    restart: unless-stopped
+    
+    networks:
+      - students_network
+
+# ═══════════════════════════════════════════════════════════
+# Named Volumes for Data Persistence
+# ═══════════════════════════════════════════════════════════
 volumes:
+  redis_data:
+    driver: local
+  
+  # postgres_data:  # Uncomment if using local PostgreSQL
+  #   driver: local
+  
   caddy_data:
+    driver: local
+  
   caddy_config:
+    driver: local
+  
+  backend_logs:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════
+# Docker Network for Service Communication
+# ═══════════════════════════════════════════════════════════
+networks:
+  students_network:
+    driver: bridge
 
 
