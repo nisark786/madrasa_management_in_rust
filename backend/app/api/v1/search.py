@@ -12,6 +12,12 @@ from app.models.student import Student
 
 router = APIRouter(prefix="/search", tags=["Advanced Search"])
 
+# ═══════════════════════════════════════════════════════════════
+# HIGH PRIORITY FIX #6: Search Result Limits
+# ═══════════════════════════════════════════════════════════════
+MAX_SEARCH_RESULTS = 1000       # Maximum results in a single search
+MAX_PAGE_SIZE = 100              # Maximum results per page (pagination)
+
 
 # ─────── Request/Response Models ─────────────────────────────────────────
 
@@ -26,7 +32,12 @@ class SearchRequest(BaseModel):
     sort_by: str = Field(default="first_name", description="Field to sort by")
     sort_order: str = Field(default="asc", description="Sort order: asc or desc")
     page: int = Field(default=1, ge=1, description="Page number")
-    page_size: int = Field(default=20, ge=1, le=100, description="Results per page")
+    page_size: int = Field(
+        default=20,
+        ge=1,
+        le=MAX_PAGE_SIZE,
+        description=f"Results per page (max {MAX_PAGE_SIZE})"
+    )
 
 
 class StudentSearchResult(BaseModel):
@@ -104,6 +115,9 @@ async def search_students(
     """
     Advanced search for students with filtering and sorting.
     
+    ⚠️ PERFORMANCE: Results are paginated with max {MAX_PAGE_SIZE} per page to prevent database overload.
+    Use pagination to retrieve all results.
+    
     ### Filters supported:
     - `class_name`: Filter by class
     - `city`: Filter by city
@@ -116,18 +130,18 @@ async def search_students(
     
     ### Example:
     ```json
-    {
+    {{
         "query": "John Doe",
-        "filters": {
+        "filters": {{
             "class_name": "10A",
             "city": "New York",
             "is_active": true
-        },
+        }},
         "sort_by": "first_name",
         "sort_order": "asc",
         "page": 1,
         "page_size": 20
-    }
+    }}
     ```
     """
     result = await AdvancedSearchService.search_students(

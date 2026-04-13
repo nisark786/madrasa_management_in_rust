@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete
@@ -19,6 +19,12 @@ router = APIRouter(prefix="/bulk", tags=["Bulk Operations"])
 
 # Cache key
 _STUDENTS_LIST_KEY = "cache:students:list"
+
+# ═══════════════════════════════════════════════════════════════
+# HIGH PRIORITY FIX #5: Bounded Export Limits
+# ═══════════════════════════════════════════════════════════════
+MAX_EXPORT_ROWS = 50000  # Maximum rows per export (prevents OOM)
+MAX_PAGE_SIZE = 5000     # Maximum rows per paginated fetch
 
 
 class BulkImportResponse(BaseModel):
@@ -46,43 +52,79 @@ async def export_students_csv(
     db: AsyncSession = Depends(get_db),
     _=Depends(require_permission("students:read")),
 ):
-    """Export all students as CSV file."""
+    """
+    Export students as CSV file with streaming and limits.
+    
+    HIGH PRIORITY FIX #5: Prevents OOM by:
+    - Limiting total export size (50k rows max)
+    - Streaming response (yields chunks, not full load)
+    - Paginated database queries (5k per page)
+    """
+    async def generate_csv():
+        """Generate CSV by streaming chunks from database."""
+        offset = 0
+        total_rows = 0
+        is_first_page = True
+        
+        while total_rows < MAX_EXPORT_ROWS:
+            # Fetch page of students
+            result = await db.execute(
+                select(Student)
+                .order_by(Student.created_at.desc())
+                .limit(MAX_PAGE_SIZE)
+                .offset(offset)
+            )
+            students = result.scalars().all()
+            
+            if not students:
+                break  # No more data
+            
+            # Convert to list of dicts
+            students_data = [
+                {
+                    'first_name': s.first_name,
+                    'last_name': s.last_name,
+                    'email': s.email,
+                    'class_name': s.class_name,
+                    'roll_no': s.roll_no,
+                    'admission_no': s.admission_no,
+                    'mobile_numbers': s.mobile_numbers,
+                    'address': s.address,
+                    'city': s.city,
+                    'state': s.state,
+                    'zip_code': s.zip_code,
+                    'date_of_birth': s.date_of_birth,
+                    'enrollment_date': s.enrollment_date,
+                    'is_active': s.is_active,
+                    'notes': s.notes,
+                }
+                for s in students
+            ]
+            
+            # Generate CSV for this page (with header on first page)
+            csv_content = BulkOperationService.students_to_csv(students_data)
+            
+            if is_first_page:
+                # First page: include everything (header + data)
+                yield csv_content
+                is_first_page = False
+            else:
+                # Subsequent pages: strip header and yield body only
+                lines = csv_content.strip().split('\n')
+                if len(lines) > 1:
+                    yield '\n'.join(lines[1:]) + '\n'
+            
+            total_rows += len(students)
+            offset += MAX_PAGE_SIZE
+        
+        # Note: If export was truncated
+        if total_rows >= MAX_EXPORT_ROWS:
+            msg = f"\n# Export limited to {MAX_EXPORT_ROWS} rows. Use filters or pagination for larger exports.\n"
+            yield msg
+    
     try:
-        # Fetch all students
-        result = await db.execute(select(Student).order_by(Student.created_at.desc()))
-        students = result.scalars().all()
-        
-        # Convert to list of dicts
-        students_data = [
-            {
-                'id': s.id,
-                'first_name': s.first_name,
-                'last_name': s.last_name,
-                'email': s.email,
-                'class_name': s.class_name,
-                'roll_no': s.roll_no,
-                'admission_no': s.admission_no,
-                'mobile_numbers': s.mobile_numbers,
-                'address': s.address,
-                'city': s.city,
-                'state': s.state,
-                'zip_code': s.zip_code,
-                'date_of_birth': s.date_of_birth,
-                'enrollment_date': s.enrollment_date,
-                'is_active': s.is_active,
-                'notes': s.notes,
-                'created_at': s.created_at,
-                'updated_at': s.updated_at,
-            }
-            for s in students
-        ]
-        
-        # Generate CSV
-        csv_content = BulkOperationService.students_to_csv(students_data)
-        
-        # Return as downloadable file
         return StreamingResponse(
-            iter([csv_content]),
+            generate_csv(),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=students_export.csv"}
         )

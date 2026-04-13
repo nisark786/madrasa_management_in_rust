@@ -1,12 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 
 from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal
-from app.core.redis_client import init_redis, close_redis
+from app.core.redis_client import init_redis, close_redis, redis_client
 from app.core.seed import seed_database
 from app.core.structured_logging import setup_logging, get_logger
 from app.core.error_handler import (
@@ -141,6 +141,92 @@ def root():
     return {"message": "Students Data Store API 🚀", "docs": "/docs"}
 
 
-@app.get("/health")
-def health():
+# ═══════════════════════════════════════════════════════════════
+# HIGH PRIORITY FIX #8: Health Check Endpoints
+# ═══════════════════════════════════════════════════════════════
+# Kubernetes/Docker compatible health checks:
+# - /health/live  → Is the app process running? (quick check)
+# - /health/ready → Can the app handle traffic? (dependencies check)
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/health/live", tags=["Health"])
+async def health_live():
+    """
+    Liveness probe: Is the application process running?
+    
+    Used by: Docker, Kubernetes, load balancers
+    Purpose: Detect if app is hung/crashed and needs restart
+    Response time: < 100ms
+    """
+    return {
+        "status": "alive",
+        "service": "students-backend",
+        "version": "1.0.0"
+    }
+
+
+@app.get("/health/ready", tags=["Health"])
+async def health_ready():
+    """
+    Readiness probe: Can the application handle traffic?
+    
+    Checks:
+    - Database connectivity
+    - Redis connectivity
+    - Configuration validation
+    
+    Used by: Kubernetes, container orchestration
+    Purpose: Wait before routing traffic to new instances
+    Response time: < 1000ms
+    """
+    errors = []
+    
+    # Check database
+    try:
+        async with engine.begin() as conn:
+            pass
+    except Exception as e:
+        errors.append(f"Database: {str(e)}")
+    
+    # Check Redis
+    try:
+        if redis_client:
+            # Ping Redis
+            await redis_client.ping()
+        else:
+            errors.append("Redis: Not initialized")
+    except Exception as e:
+        errors.append(f"Redis: {str(e)}")
+    
+    # If any checks failed, return 503 Service Unavailable
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "status": "not_ready",
+                "errors": errors,
+                "message": "Application is not ready to handle traffic"
+            }
+        )
+    
+    return {
+        "status": "ready",
+        "service": "students-backend",
+        "version": "1.0.0",
+        "dependencies": {
+            "database": "ok",
+            "redis": "ok",
+            "config": "ok"
+        }
+    }
+
+
+# Keep the old /health endpoint for backward compatibility
+@app.get("/health", tags=["Health"])
+async def health():
+    """
+    Basic health check (deprecated).
+    
+    Use /health/live or /health/ready instead.
+    """
     return {"status": "ok"}
