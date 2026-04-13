@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_admin
+from app.dependencies.auth import get_current_user, require_permission
 from app.core.backup_service import DatabaseBackupService
 from app.models.user import User
 from app.models.database_backup import DatabaseBackup, BackupRestore, BackupSchedule
@@ -30,7 +30,7 @@ def create_backup(
     compress: bool = Query(True),
     upload_to_drive: bool = Query(False),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Create a new database backup.
@@ -100,7 +100,7 @@ def list_backups(
     page_size: int = Query(20, ge=1, le=500),
     status: str = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     List all database backups with pagination and filtering.
@@ -157,7 +157,7 @@ def list_backups(
 def get_backup(
     backup_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Get detailed backup information.
@@ -219,7 +219,7 @@ def restore_backup(
     backup_id: str,
     restore_mode: str = Query("full_restore"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Restore database from a backup.
@@ -267,7 +267,7 @@ def restore_backup(
 def delete_backup(
     backup_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Delete a backup and its files.
@@ -307,7 +307,7 @@ def delete_backup(
 @router.get("/stats/summary", response_model=dict)
 def get_backup_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Get backup statistics and summary.
@@ -337,7 +337,7 @@ def create_backup_schedule(
     retention_days: int = 30,
     max_backups: int = 10,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Create a new backup schedule for automated backups.
@@ -404,7 +404,7 @@ def list_backup_schedules(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     List all backup schedules.
@@ -460,7 +460,7 @@ def update_backup_schedule(
     time_of_day: str = None,
     retention_days: int = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Update a backup schedule.
@@ -519,7 +519,7 @@ def update_backup_schedule(
 def delete_backup_schedule(
     schedule_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Delete a backup schedule.
@@ -559,7 +559,7 @@ def delete_backup_schedule(
 def upload_backup_to_drive(
     backup_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Upload an existing backup to Google Drive.
@@ -641,7 +641,7 @@ def upload_backup_to_drive(
 @router.get("/google-drive/storage-info", response_model=dict)
 def get_google_drive_storage_info(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Get Google Drive storage information.
@@ -665,7 +665,7 @@ def get_google_drive_storage_info(
 @router.get("/google-drive/list-files", response_model=dict)
 def list_google_drive_backups(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     List all backups stored in Google Drive.
@@ -713,7 +713,7 @@ def list_google_drive_backups(
 def delete_backup_from_drive(
     backup_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_permission("admin:manage_users")),
 ) -> dict:
     """
     Delete a backup from Google Drive.

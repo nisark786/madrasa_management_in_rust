@@ -49,3 +49,13 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    report_templates: Mapped[list["ReportTemplate"]] = relationship(
+        "ReportTemplate",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    generated_reports: Mapped[list["GeneratedReport"]] = relationship(
+        "GeneratedReport",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
