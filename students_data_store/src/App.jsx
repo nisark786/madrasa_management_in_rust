@@ -20,6 +20,7 @@ const RolesPage   = lazy(() => import('./pages/RolesPage'));
 const RoleTemplatesPage = lazy(() => import('./pages/RoleTemplatesPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentReport = lazy(() => import('./pages/StudentReport'));
+const AdvancedSearchPage = lazy(() => import('./pages/AdvancedSearchPage'));
 const BulkOperationsPage = lazy(() => import('./pages/BulkOperationsPage'));
 const EmailHistoryPage = lazy(() => import('./pages/EmailHistoryPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -129,6 +130,16 @@ export default function App() {
                 <ProtectedRoute permission="students:write">
                   <RouteErrorBoundary routeName="Bulk Operations">
                     <BulkOperationsPage />
+                  </RouteErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/advanced-search"
+              element={
+                <ProtectedRoute permission="students:read">
+                  <RouteErrorBoundary routeName="Advanced Search">
+                    <AdvancedSearchPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }
