@@ -17,6 +17,7 @@ import ResendVerificationPage from './pages/ResendVerificationPage';
 const Dashboard   = lazy(() => import('./pages/Dashboard'));
 const UsersPage   = lazy(() => import('./pages/UsersPage'));
 const RolesPage   = lazy(() => import('./pages/RolesPage'));
+const RoleTemplatesPage = lazy(() => import('./pages/RoleTemplatesPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const StudentReport = lazy(() => import('./pages/StudentReport'));
 const EmailHistoryPage = lazy(() => import('./pages/EmailHistoryPage'));
@@ -87,6 +88,16 @@ export default function App() {
                 <ProtectedRoute permission="admin:manage_roles">
                   <RouteErrorBoundary routeName="Roles Management">
                     <RolesPage />
+                  </RouteErrorBoundary>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/role-templates"
+              element={
+                <ProtectedRoute permission="admin:manage_roles">
+                  <RouteErrorBoundary routeName="Role Templates">
+                    <RoleTemplatesPage />
                   </RouteErrorBoundary>
                 </ProtectedRoute>
               }

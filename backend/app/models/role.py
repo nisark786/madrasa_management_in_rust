@@ -21,6 +21,38 @@ class Role(Base):
     user_roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
 
 
+class RoleTemplate(Base):
+    """Predefined role templates for quick role creation"""
+    __tablename__ = "role_templates"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    display_name: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "Teacher"
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    icon: Mapped[str] = mapped_column(String(50), nullable=True)  # e.g. "users", "book", "settings"
+    color: Mapped[str] = mapped_column(String(20), nullable=True)  # e.g. "blue", "green", "red"
+    is_system_template: Mapped[bool] = mapped_column(Boolean, default=False)  # Cannot be deleted if True
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    created_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    template_permissions: Mapped[list["TemplatePermission"]] = relationship("TemplatePermission", back_populates="template", cascade="all, delete-orphan")
+
+
+class TemplatePermission(Base):
+    """Many-to-many: RoleTemplate ↔ Permission"""
+    __tablename__ = "template_permissions"
+
+    template_id: Mapped[str] = mapped_column(String, ForeignKey("role_templates.id", ondelete="CASCADE"), primary_key=True)
+    permission_id: Mapped[str] = mapped_column(String, ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    template: Mapped["RoleTemplate"] = relationship("RoleTemplate", back_populates="template_permissions")
+    permission: Mapped["Permission"] = relationship("Permission")
+
+
 class UserRole(Base):
     """Many-to-many: User ↔ Role"""
     __tablename__ = "user_roles"

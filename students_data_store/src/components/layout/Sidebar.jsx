@@ -10,7 +10,8 @@ import {
   Mail,
   User as UserIcon,
   FileText,
-  HardDrive
+  HardDrive,
+  Layout
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/admin/students',      label: 'Students',     icon: GraduationCap, permission: 'students:read' },
   { to: '/admin/users',         label: 'Users',        icon: Users, permission: 'admin:manage_users' },
   { to: '/admin/roles',         label: 'Roles',        icon: ShieldCheck, permission: 'admin:manage_roles' },
+  { to: '/admin/role-templates', label: 'Role Templates', icon: Layout, permission: 'admin:manage_roles' },
   { to: '/admin/audit-logs',    label: 'Audit Logs',   icon: FileText, permission: 'admin:view_audit' },
   { to: '/admin/emails',        label: 'Email History',icon: Mail, permission: 'admin:manage_users' },
   { to: '/admin/backups',       label: 'Backups',      icon: HardDrive, permission: 'admin:manage_users' },

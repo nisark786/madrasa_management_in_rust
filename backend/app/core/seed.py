@@ -16,7 +16,7 @@ from sqlalchemy import select
 import os
 
 from app.models.user import User
-from app.models.role import Role, UserRole
+from app.models.role import Role, UserRole, RoleTemplate, TemplatePermission
 from app.models.permission import Permission, RolePermission
 from app.models.widget import Widget, WidgetPermission
 from app.models.email import EmailTemplate
@@ -151,6 +151,43 @@ SYSTEM_EMAIL_TEMPLATES = [
     },
 ]
 
+# ── Role Templates — predefined role templates for quick role creation ────────────
+# These match: ["students:read", "students:write", "students:delete", "reports:view", "admin:manage_roles", "admin:manage_users", "admin:view_audit"]
+SYSTEM_ROLE_TEMPLATES = [
+    {
+        "name": "viewer",
+        "display_name": "Viewer",
+        "description": "Read-only access to view students and reports",
+        "icon": "eye",
+        "color": "blue",
+        "permissions": ["students:read", "reports:view"],
+    },
+    {
+        "name": "editor",
+        "display_name": "Editor",
+        "description": "Can view, create, and edit students",
+        "icon": "edit",
+        "color": "green",
+        "permissions": ["students:read", "students:write", "reports:view"],
+    },
+    {
+        "name": "manager",
+        "display_name": "Manager",
+        "description": "Full control over students and user management",
+        "icon": "users",
+        "color": "purple",
+        "permissions": ["students:read", "students:write", "students:delete", "reports:view", "admin:manage_users"],
+    },
+    {
+        "name": "auditor",
+        "display_name": "Auditor",
+        "description": "View audit logs and system activity",
+        "icon": "list",
+        "color": "orange",
+        "permissions": ["admin:view_audit"],
+    },
+]
+
 
 async def seed_database(db: AsyncSession):
     print("🌱 Running database seed...")
@@ -187,7 +224,31 @@ async def seed_database(db: AsyncSession):
             db.add(RolePermission(role_id=admin_role.id, permission_id=perm.id))
         print("  ✅ All permissions assigned to admin role")
 
-    # ── 3. Seed ONE system user (credentials from environment variables) ────────
+    # ── 3. Seed role templates (predefined role templates for quick role creation) ──
+    for tdata in SYSTEM_ROLE_TEMPLATES:
+        result = await db.execute(select(RoleTemplate).where(RoleTemplate.name == tdata["name"]))
+        template = result.scalar_one_or_none()
+        if not template:
+            template = RoleTemplate(
+                name=tdata["name"],
+                display_name=tdata["display_name"],
+                description=tdata["description"],
+                icon=tdata["icon"],
+                color=tdata["color"],
+                is_system_template=True,  # System templates cannot be deleted
+                is_active=True,
+            )
+            db.add(template)
+            await db.flush()
+
+            # Add permissions to template
+            for perm_name in tdata["permissions"]:
+                perm = perm_map.get(perm_name)
+                if perm:
+                    db.add(TemplatePermission(template_id=template.id, permission_id=perm.id))
+            print(f"  ✅ Role template created: {tdata['display_name']}")
+
+    # ── 4. Seed ONE system user (credentials from environment variables) ────────
     # NO other users seeded — admin creates all users dynamically via API
     admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.getenv("ADMIN_PASSWORD")
@@ -214,7 +275,7 @@ async def seed_database(db: AsyncSession):
         db.add(UserRole(user_id=admin_user.id, role_id=admin_role.id))
         print(f"  ✅ Admin user created: {admin_email}")
 
-    # ── 4. Seed widgets (linked to permissions) ────────────────────────────────
+    # ── 5. Seed widgets (linked to permissions) ────────────────────────────────
     for wdata in SYSTEM_WIDGETS:
         result = await db.execute(select(Widget).where(Widget.name == wdata["name"]))
         widget = result.scalar_one_or_none()
@@ -234,7 +295,7 @@ async def seed_database(db: AsyncSession):
                 db.add(WidgetPermission(widget_id=widget.id, permission_id=perm.id))
             print(f"  ✅ Widget created: {wdata['display_name']}")
 
-    # ── 5. Seed email templates ────────────────────────────────────────────────────
+    # ── 6. Seed email templates ────────────────────────────────────────────────────
     for tdata in SYSTEM_EMAIL_TEMPLATES:
         result = await db.execute(select(EmailTemplate).where(EmailTemplate.name == tdata["name"]))
         template = result.scalar_one_or_none()
