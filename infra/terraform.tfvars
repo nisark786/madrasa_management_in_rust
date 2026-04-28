@@ -1,3 +1,0 @@
-aws_region     = "us-east-1"
-aws_access_key = "YOUR_AWS_ACCESS_KEY_HERE"
-aws_secret_key = "YOUR_AWS_SECRET_KEY_HERE"

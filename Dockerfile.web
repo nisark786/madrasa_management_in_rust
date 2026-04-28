@@ -1,0 +1,31 @@
+FROM rust:1.89-slim AS base
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy workspace root files
+COPY Cargo.toml ./
+
+# Copy all source code (preserve directory structure)
+COPY apps apps
+COPY crates crates
+
+# Build web binary
+RUN cargo build -p madrasa-web --release
+
+# Runtime stage
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=base /app/target/release/madrasa-web /usr/local/bin/madrasa-web
+
+ENV WEB_PORT=3000
+EXPOSE 3000
+
+CMD ["madrasa-web"]

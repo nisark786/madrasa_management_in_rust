@@ -1,37 +1,8 @@
+target/
+dist/
 node_modules/
 .env
 .env.local
-.env.*.local
-dist/
-build/
-backend/__pycache__/
-backend/.pytest_cache/
-*.pyc
-
-# Docker
-docker-compose.override.yml
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Environment variables (never commit!)
-.env*
-!.env.example
-!docker-compose.env.example
-
-# Terraform files (too large and sensitive)
-.terraform/
-*.tfstate
-*.tfstate.*
-*.tfvars
-.terraform.lock.hcl
-
-# Google Cloud / Credentials
-backend/google-credentials.json
-*.json
-!package.json
-!tsconfig.json
-!composer.json
+.DS_Store
+Thumbs.db
+*.log

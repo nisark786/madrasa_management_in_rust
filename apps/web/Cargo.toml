@@ -1,0 +1,30 @@
+[package]
+name = "madrasa-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+leptos = { version = "0.6", features = ["csr"] }
+leptos_router = "0.6"
+leptos_meta = "0.6"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+axum.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+shared = { path = "../../crates/shared" }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "HtmlElement", "Storage", "Location"] }
+wasm-bindgen = "0.2"
+gloo = "0.1"
+gloo-utils = "0.1"
+wasm-bindgen-futures = "0.4"
+thiserror = "1"
+validator = { version = "0.16", features = ["derive"] }
+regex = "1"
