@@ -6,6 +6,7 @@ use axum::{
     Json, Router,
 };
 use db::repositories::{create_audit_log, create_staff_profile, get_staff_profile_by_id, list_staff_profiles, update_staff_profile};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -14,11 +15,11 @@ use crate::auth::AuthContext;
 use crate::error::AppError;
 use dto::{CreateStaffRequest, ListStaffQuery, ListStaffResponse, StaffResponse, UpdateStaffRequest};
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "staff_registry_ok" }))
-        .route("", get(list_staff))
-        .route("", post(create_staff))
+        .route("/", get(list_staff))
+        .route("/", post(create_staff))
         .route("/:staff_id", get(get_staff))
         .route("/:staff_id", put(update_staff))
 }

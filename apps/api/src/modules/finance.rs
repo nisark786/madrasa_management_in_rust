@@ -10,6 +10,7 @@ use db::repositories::{
     list_fee_plans, list_invoices, list_payments, update_invoice_status,
 };
 use serde::Deserialize;
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -21,7 +22,7 @@ use dto::{
     InvoiceDetailsResponse, InvoiceResponse, ListInvoicesResponse, PaymentResponse,
 };
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "finance_ok" }))
         .route("/fee-plans", post(create_fee_plan_handler))

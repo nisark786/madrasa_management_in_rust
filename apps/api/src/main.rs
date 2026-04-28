@@ -27,7 +27,7 @@ async fn main() {
         .await
         .expect("failed to connect postgres");
 
-    sqlx::migrate_from!("../../../migrations")
+    sqlx::migrate!("../../migrations")
         .run(&pg_pool)
         .await
         .expect("failed to run migrations");

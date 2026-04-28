@@ -2,10 +2,10 @@ use leptos::*;
 
 #[component]
 pub fn Button(
-    #[prop(default = "button".to_string())] variant: String,
+    #[prop(into, default = "button".to_string())] variant: String,
     #[prop(default = false)] disabled: bool,
     #[prop(default = false)] loading: bool,
-    #[prop(default = "w-full".to_string())] class: String,
+    #[prop(into, default = "w-full".to_string())] class: String,
     children: Children,
     #[prop(optional)] on_click: Option<impl Fn(leptos::ev::MouseEvent) + 'static>,
 ) -> impl IntoView {
@@ -51,7 +51,7 @@ pub fn Button(
 }
 
 #[component]
-pub fn Card(children: Children, #[prop(default = "".to_string())] class: String) -> impl IntoView {
+pub fn Card(children: Children, #[prop(into, default = "".to_string())] class: String) -> impl IntoView {
     view! {
         <div class=format!(
             "bg-white rounded-xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow duration-200 {}",
@@ -64,12 +64,12 @@ pub fn Card(children: Children, #[prop(default = "".to_string())] class: String)
 
 #[component]
 pub fn Input(
-    #[prop(default = "text".to_string())] input_type: String,
-    #[prop(default = "".to_string())] placeholder: String,
+    #[prop(into, default = "text".to_string())] input_type: String,
+    #[prop(into, default = "".to_string())] placeholder: String,
     #[prop(optional)] value: Option<String>,
     #[prop(optional)] on_input: Option<impl Fn(String) + 'static>,
     #[prop(default = false)] required: bool,
-    #[prop(default = "".to_string())] class: String,
+    #[prop(into, default = "".to_string())] class: String,
 ) -> impl IntoView {
     view! {
         <input
@@ -91,7 +91,7 @@ pub fn Input(
 }
 
 #[component]
-pub fn Label(#[prop(optional)] for_id: Option<String>, children: Children) -> impl IntoView {
+pub fn Label(#[prop(optional, into)] for_id: Option<String>, children: Children) -> impl IntoView {
     view! {
         <label
             for=for_id
@@ -113,7 +113,7 @@ pub fn FormGroup(children: Children) -> impl IntoView {
 
 #[component]
 pub fn Badge(
-    #[prop(default = "default".to_string())] variant: String,
+    #[prop(into, default = "default".to_string())] variant: String,
     children: Children,
 ) -> impl IntoView {
     let (bg_class, text_class) = match variant.as_str() {
@@ -137,7 +137,7 @@ pub fn Badge(
 
 #[component]
 pub fn Alert(
-    #[prop(default = "info".to_string())] variant: String,
+    #[prop(into, default = "info".to_string())] variant: String,
     children: Children,
 ) -> impl IntoView {
     let (bg_class, border_class, text_class) = match variant.as_str() {

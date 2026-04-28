@@ -66,8 +66,9 @@ pub fn App() -> impl IntoView {
         </style>
 
         <AuthProvider>
-            <Router fallback=|| {
-                view! { <div class="flex items-center justify-center h-screen text-slate-600">"Page not found"</div> }>
+            <Router fallback=|| view! {
+                <div class="flex items-center justify-center h-screen text-slate-600">"Page not found"</div>
+            }.into_view()>
                 <Routes>
                     <Route path="/login" view=LoginPage />
                     <Route path="/" view=DashboardPage />

@@ -2,6 +2,7 @@ mod dto;
 
 use axum::{extract::Query, routing::{get, post}, Json, Router};
 use db::repositories::{create_audit_log, create_student_profile, list_student_profiles};
+use std::sync::Arc;
 use validator::Validate;
 
 use crate::app::AppState;
@@ -9,11 +10,11 @@ use crate::auth::AuthContext;
 use crate::error::AppError;
 use dto::{CreateStudentRequest, ListStudentsQuery, ListStudentsResponse, StudentResponse};
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "student_registry_ok" }))
-        .route("", get(list_students))
-        .route("", post(create_student))
+        .route("/", get(list_students))
+        .route("/", post(create_student))
 }
 
 async fn create_student(

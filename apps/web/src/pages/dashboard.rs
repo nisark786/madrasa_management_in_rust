@@ -8,10 +8,11 @@ use crate::components::{AppLayout, Card, Badge};
 pub fn DashboardPage() -> impl IntoView {
     let auth = use_auth();
     let navigate = use_navigate();
+    let auth_for_effect = auth.clone();
 
     // Check if authenticated, redirect to login if not
     create_effect(move |_| {
-        if let Some(auth) = auth {
+        if let Some(auth) = auth_for_effect.as_ref() {
             if !auth.is_authenticated() {
                 navigate("/login", Default::default());
             }
@@ -247,7 +248,7 @@ fn ActionButton(label: &'static str, icon: &'static str) -> impl IntoView {
         <button class="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg transition-colors group">
             <span class="text-xl">{icon}</span>
             <span class="text-sm font-500 text-slate-700 group-hover:text-blue-600">{label}</span>
-            <span class="ml-auto text-slate-400 group-hover:text-blue-400">→</span>
+            <span class="ml-auto text-slate-400 group-hover:text-blue-400">"->"</span>
         </button>
     }
 }
@@ -317,3 +318,4 @@ fn ProgressItem(label: &'static str, current: &'static str, total: &'static str)
         </div>
     }
 }
+

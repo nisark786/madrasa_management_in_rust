@@ -2,6 +2,7 @@ mod dto;
 mod service;
 
 use axum::{extract::State, routing::{get, post}, Json, Router};
+use std::sync::Arc;
 use db::repositories::{create_audit_log, get_tenant_by_slug, get_user_by_email};
 use redis::AsyncCommands;
 use shared::auth::Role;
@@ -12,7 +13,7 @@ use crate::{app::AppState, error::AppError};
 use dto::{BootstrapRequest, LoginRequest, RefreshRequest, RegisterRequest, TokenResponse};
 use service::{decode_refresh_token, hash_password, issue_tokens, verify_password, TokenConfig};
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "identity_access_ok" }))
         .route("/login", post(login))
@@ -38,10 +39,6 @@ async fn login(
         return Err(AppError::Forbidden);
     }
 
-    if payload.role == "platform_admin" {
-        return Err(AppError::Forbidden);
-    }
-
     let user = get_user_by_email(&state.pg_pool, tenant.id, &payload.email)
         .await
         .map_err(|_| AppError::Db)?
@@ -58,7 +55,8 @@ async fn login(
         refresh_ttl_days: state.config.jwt_refresh_ttl_days,
     };
 
-    let issued = issue_tokens(user.id, tenant.id, user.role, &cfg).map_err(|_| AppError::Internal)?;
+    let user_role = user.role.clone();
+    let issued = issue_tokens(user.id, tenant.id, user_role.clone(), &cfg).map_err(|_| AppError::Internal)?;
 
     let mut redis = state
         .redis
@@ -76,7 +74,7 @@ async fn login(
         &state.pg_pool,
         tenant.id,
         Some(user.id),
-        Some(user.role),
+        Some(user_role.clone()),
         "auth.login",
         "user",
         Some(user.id),
@@ -90,7 +88,7 @@ async fn login(
         expires_in: issued.access_expires_in,
         user_id: user.id,
         tenant_id: tenant.id,
-        role: user.role.as_str().to_string(),
+        role: user_role.as_str().to_string(),
         email: user.email.clone(),
     }))
 }
@@ -157,7 +155,8 @@ async fn register(
         refresh_ttl_days: state.config.jwt_refresh_ttl_days,
     };
 
-    let issued = issue_tokens(user.id, tenant.id, user.role, &cfg).map_err(|_| AppError::Internal)?;
+    let user_role = user.role.clone();
+    let issued = issue_tokens(user.id, tenant.id, user_role.clone(), &cfg).map_err(|_| AppError::Internal)?;
 
     let key = format!("refresh:{}:{}", user.id, issued.refresh_jti);
     let ttl = (issued.refresh_expires_at - chrono::Utc::now().timestamp()).max(1) as u64;
@@ -170,7 +169,7 @@ async fn register(
         &state.pg_pool,
         tenant.id,
         Some(user.id),
-        Some(user.role),
+        Some(user_role.clone()),
         "auth.register",
         "user",
         Some(user.id),
@@ -184,7 +183,7 @@ async fn register(
         expires_in: issued.access_expires_in,
         user_id: user.id,
         tenant_id: tenant.id,
-        role: user.role.as_str().to_string(),
+        role: user_role.as_str().to_string(),
         email: user.email.clone(),
     }))
 }
@@ -345,7 +344,7 @@ async fn bootstrap(
         &state.pg_pool,
         tenant.id,
         Some(user.id),
-        Some(role),
+        Some(role.clone()),
         "auth.bootstrap",
         "user",
         Some(user.id),
@@ -357,5 +356,9 @@ async fn bootstrap(
         refresh_token: issued.refresh_token,
         token_type: "Bearer",
         expires_in: issued.access_expires_in,
+        user_id: user.id,
+        tenant_id: tenant.id,
+        role: role.as_str().to_string(),
+        email: user.email.clone(),
     }))
 }

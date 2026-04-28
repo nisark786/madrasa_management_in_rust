@@ -1,4 +1,6 @@
 use axum::Router;
+use std::sync::Arc;
+use crate::app::AppState;
 
 pub mod academics;
 pub mod audit_compliance;
@@ -12,7 +14,7 @@ pub mod staff_registry;
 pub mod student_registry;
 pub mod tenant_admin;
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .nest("/identity", identity_access::router())
         .nest("/tenants", tenant_admin::router())

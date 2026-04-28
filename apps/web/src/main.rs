@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use axum::{response::Html, routing::get, Router};
+use axum::{http::StatusCode, response::Html, routing::get, Router};
 use tracing::info;
 
 #[tokio::main]
@@ -9,6 +9,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(index))
+        .route("/favicon.ico", get(favicon))
         .route("/health", get(health));
 
     let port = std::env::var("WEB_PORT")
@@ -38,6 +39,10 @@ fn init_tracing() {
 
 async fn health() -> &'static str {
     "ok"
+}
+
+async fn favicon() -> StatusCode {
+    StatusCode::NO_CONTENT
 }
 
 async fn index() -> Html<&'static str> {
@@ -106,18 +111,34 @@ async fn index() -> Html<&'static str> {
     </style>
 </head>
 <body>
-    <div id="app"></div>
+    <div id="app" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-xl bg-white border border-slate-200 rounded-xl p-8 shadow-sm text-center">
+            <h1 class="text-3xl font-bold text-slate-900 mb-3">Madrasa Student Management</h1>
+            <p class="text-slate-600 mb-4">
+                Web server is running. Frontend wasm bundle was not found, so static fallback is shown.
+            </p>
+            <a href="/health" class="inline-block px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+                Health Check
+            </a>
+        </div>
+    </div>
     
     <script type="module">
-        import init, { App } from '/js/madrasa_web.js';
-        
-        async function main() {
-            await init();
-            const root = document.getElementById('app');
-            App().mount(root);
+        async function bootIfBundleExists() {
+            try {
+                const res = await fetch('/js/madrasa_web.js', { method: 'HEAD' });
+                if (!res.ok) return;
+                const mod = await import('/js/madrasa_web.js');
+                if (!mod || !mod.default || !mod.App) return;
+                await mod.default();
+                const root = document.getElementById('app');
+                root.innerHTML = '';
+                mod.App().mount(root);
+            } catch (e) {
+                console.warn('WASM bundle bootstrap skipped:', e);
+            }
         }
-        
-        main().catch(console.error);
+        bootIfBundleExists();
     </script>
 </body>
 </html>"#,

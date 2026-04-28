@@ -3,6 +3,7 @@ mod service;
 
 use axum::{routing::get, Json, Router};
 use db::repositories::list_audit_logs;
+use std::sync::Arc;
 
 use crate::app::AppState;
 use crate::auth::AuthContext;
@@ -10,11 +11,11 @@ use crate::error::AppError;
 use model::AuditEvent;
 use service::build_event;
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "audit_compliance_ok" }))
         .route("/sample", get(sample_event))
-        .route("", get(list_events))
+        .route("/", get(list_events))
 }
 
 async fn sample_event(auth: AuthContext) -> Result<Json<AuditEvent>, AppError> {

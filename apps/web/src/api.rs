@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
@@ -61,13 +62,13 @@ pub async fn api_call<T: for<'de> Deserialize<'de>>(
 ) -> Result<T, String> {
     use gloo_utils::format::JsValueSerdeExt;
     use wasm_bindgen_futures::JsFuture;
-    use web_sys::{Request, RequestInit, Headers};
+    use web_sys::{Headers, Request, RequestInit};
 
     let url = format!("/api/v1{}", path);
     let mut init = RequestInit::new();
     init.method(method);
 
-    let headers = Headers::new();
+    let headers = Headers::new().map_err(|_| "Failed to create headers")?;
     if let Some(token) = token {
         headers
             .set("Authorization", &format!("Bearer {}", token))
@@ -77,10 +78,10 @@ pub async fn api_call<T: for<'de> Deserialize<'de>>(
         .set("Content-Type", "application/json")
         .map_err(|_| "Failed to set content-type")?;
 
-    init.headers(&headers);
+    init.set_headers(&headers);
 
     if let Some(body) = body {
-        init.body(Some(&wasm_bindgen::JsValue::from_str(&body)));
+        init.set_body(&wasm_bindgen::JsValue::from_str(&body));
     }
 
     let request = Request::new_with_str_and_init(&url, &init)

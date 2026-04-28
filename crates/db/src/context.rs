@@ -14,12 +14,12 @@ use shared::auth::Role;
 ///     .await?;
 /// tx.commit().await?;
 /// ```
-pub async fn begin_with_rls_context(
-    pool: &Pool<Postgres>,
+pub async fn begin_with_rls_context<'a>(
+    pool: &'a Pool<Postgres>,
     tenant_id: Uuid,
     user_id: Uuid,
-    role: &Role,
-) -> Result<Transaction<'_, Postgres>, sqlx::Error> {
+    role: &'a Role,
+) -> Result<Transaction<'a, Postgres>, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
     // Set the session variables that RLS policies check
@@ -31,7 +31,7 @@ pub async fn begin_with_rls_context(
     )
     .bind(tenant_id.to_string())
     .bind(user_id.to_string())
-    .bind(role.to_string())
+    .bind(role.as_str())
     .execute(&mut *tx)
     .await?;
 

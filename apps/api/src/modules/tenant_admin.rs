@@ -1,5 +1,6 @@
 use axum::{extract::State, routing::{get, post}, Json, Router};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -7,10 +8,10 @@ use crate::app::AppState;
 use crate::auth::AuthContext;
 use crate::error::AppError;
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "tenant_admin_ok" }))
-        .route("", post(create_tenant))
+        .route("/", post(create_tenant))
 }
 
 #[derive(Debug, Deserialize, Validate)]

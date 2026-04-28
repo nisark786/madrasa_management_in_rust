@@ -2,6 +2,7 @@ use leptos::*;
 use serde::{Deserialize, Serialize};
 use shared::auth::Role;
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
 use web_sys::window;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -87,7 +88,6 @@ impl AuthContext {
         password: &str,
         tenant_slug: &str,
     ) -> Result<AuthUser, String> {
-        use gloo_utils::format::JsValueSerdeExt;
         use wasm_bindgen_futures::JsFuture;
 
         let request_body = serde_json::json!({
@@ -96,26 +96,18 @@ impl AuthContext {
             "tenant_slug": tenant_slug,
         });
 
-        let request = web_sys::Request::new_with_str_and_init(
-            "/api/v1/identity/login",
-            {
-                let mut init = web_sys::RequestInit::new();
-                init.method("POST");
-                init.headers(&web_sys::Headers::new());
-                init
-            }
-        )
-        .map_err(|_| "Failed to create request".to_string())?;
-
-        request
-            .headers()
+        let mut init = web_sys::RequestInit::new();
+        init.set_method("POST");
+        let headers = web_sys::Headers::new().map_err(|_| "Failed to create headers".to_string())?;
+        headers
             .set("Content-Type", "application/json")
             .map_err(|_| "Failed to set content-type".to_string())?;
-
+        init.set_headers(&headers);
         let body = request_body.to_string();
-        request
-            .set_body_with_opt_str(Some(&body))
-            .map_err(|_| "Failed to set request body".to_string())?;
+        init.set_body(&wasm_bindgen::JsValue::from_str(&body));
+
+        let request = web_sys::Request::new_with_str_and_init("/api/v1/identity/login", &init)
+            .map_err(|_| "Failed to create request".to_string())?;
 
         let window = web_sys::window().ok_or("No window object".to_string())?;
         let response = JsFuture::from(window.fetch_with_request(&request))

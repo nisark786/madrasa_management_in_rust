@@ -6,9 +6,10 @@ use axum::{
     Json, Router,
 };
 use db::repositories::{
-    create_audit_log, create_hifz_profile, create_quran_session, create_tajweed_score, get_hifz_profile,
+    create_audit_log, create_hifz_profile as db_create_hifz_profile, create_quran_session, create_tajweed_score, get_hifz_profile,
     list_quran_sessions, list_tajweed_scores,
 };
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -21,7 +22,7 @@ use dto::{
     TajweedScoreResponse,
 };
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "quran_module_ok" }))
         .route("/hifz", post(create_hifz_profile))
@@ -42,7 +43,7 @@ async fn create_hifz_profile(
         .validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
 
-    let hifz = create_hifz_profile(&state.pg_pool, auth.tenant_id, payload.student_id)
+    let hifz = db_create_hifz_profile(&state.pg_pool, auth.tenant_id, payload.student_id)
         .await
         .map_err(|e| {
             let msg = e.to_string();

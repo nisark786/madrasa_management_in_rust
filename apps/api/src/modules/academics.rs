@@ -2,6 +2,7 @@ use axum::{extract::State, routing::{get, post}, Json, Router};
 use chrono::NaiveDate;
 use db::repositories::{create_audit_log, create_class, create_course, list_courses, mark_attendance};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -9,7 +10,7 @@ use crate::app::AppState;
 use crate::auth::AuthContext;
 use crate::error::AppError;
 
-pub fn router() -> Router {
+pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/health", get(|| async { "academics_ok" }))
         .route("/courses", post(create_course_handler).get(list_courses_handler))

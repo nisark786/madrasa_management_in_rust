@@ -10,8 +10,9 @@ pub fn AppLayout(children: Children) -> impl IntoView {
     view! {
         <div class="flex h-screen bg-slate-50">
             {if let Some(auth) = auth {
+                let auth_for_sidebar = auth.clone();
                 view! {
-                    <Sidebar auth=auth />
+                    <Sidebar auth=auth_for_sidebar />
                     <div class="flex-1 flex flex-col overflow-hidden">
                         <Header auth=auth />
                         <main class="flex-1 overflow-auto">
