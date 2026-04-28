@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub struct MakeRequestUuid;
 
 impl MakeRequestId for MakeRequestUuid {
-    fn make_request_id(&mut self, _request: &axum::http::Request<axum::body::Body>) -> Option<HeaderValue> {
+    fn make_request_id<B>(&mut self, _request: &axum::http::Request<B>) -> Option<HeaderValue> {
         HeaderValue::from_str(&Uuid::new_v4().to_string()).ok()
     }
 }
