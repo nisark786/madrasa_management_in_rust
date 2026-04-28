@@ -88,6 +88,10 @@ async fn login(
         refresh_token: issued.refresh_token,
         token_type: "Bearer",
         expires_in: issued.access_expires_in,
+        user_id: user.id,
+        tenant_id: tenant.id,
+        role: user.role.as_str().to_string(),
+        email: user.email.clone(),
     }))
 }
 
@@ -171,13 +175,17 @@ async fn register(
         "user",
         Some(user.id),
     )
-    .await;
+     .await;
 
     Ok(Json(TokenResponse {
         access_token: issued.access_token,
         refresh_token: issued.refresh_token,
         token_type: "Bearer",
         expires_in: issued.access_expires_in,
+        user_id: user.id,
+        tenant_id: tenant.id,
+        role: user.role.as_str().to_string(),
+        email: user.email.clone(),
     }))
 }
 
@@ -219,9 +227,20 @@ async fn refresh(
         return Err(AppError::Unauthorized);
     }
 
-    let _: () = redis.del(old_key).await.map_err(|_| AppError::Internal)?;
+     let _: () = redis.del(old_key).await.map_err(|_| AppError::Internal)?;
 
     let issued = issue_tokens(user_id, tenant_id, role.clone(), &cfg).map_err(|_| AppError::Internal)?;
+    
+    // Fetch user to get email
+    let user = sqlx::query_as::<_, db::models::User>(
+        "select id, tenant_id, email, password_hash, role, is_active, created_at, updated_at from users where id = $1 and tenant_id = $2"
+    )
+    .bind(user_id)
+    .bind(tenant_id)
+    .fetch_one(&state.pg_pool)
+    .await
+    .map_err(|_| AppError::Unauthorized)?;
+    
     let new_key = format!("refresh:{}:{}", user_id, issued.refresh_jti);
     let ttl = (issued.refresh_expires_at - chrono::Utc::now().timestamp()).max(1) as u64;
     let _: () = redis
@@ -233,7 +252,7 @@ async fn refresh(
         &state.pg_pool,
         tenant_id,
         Some(user_id),
-        Some(role),
+        Some(role.clone()),
         "auth.refresh",
         "user",
         Some(user_id),
@@ -245,6 +264,10 @@ async fn refresh(
         refresh_token: issued.refresh_token,
         token_type: "Bearer",
         expires_in: issued.access_expires_in,
+        user_id: user.id,
+        tenant_id: tenant_id,
+        role: role.as_str().to_string(),
+        email: user.email.clone(),
     }))
 }
 

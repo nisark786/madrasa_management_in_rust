@@ -67,7 +67,7 @@ pub async fn api_call<T: for<'de> Deserialize<'de>>(
     let mut init = RequestInit::new();
     init.method(method);
 
-    let headers = Headers::new().map_err(|_| "Failed to create headers")?;
+    let headers = Headers::new();
     if let Some(token) = token {
         headers
             .set("Authorization", &format!("Bearer {}", token))

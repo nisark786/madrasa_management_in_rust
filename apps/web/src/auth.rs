@@ -101,10 +101,7 @@ impl AuthContext {
             {
                 let mut init = web_sys::RequestInit::new();
                 init.method("POST");
-                init.headers(
-                    &web_sys::Headers::new()
-                        .map_err(|_| "Failed to create headers".to_string())?,
-                );
+                init.headers(&web_sys::Headers::new());
                 init
             }
         )

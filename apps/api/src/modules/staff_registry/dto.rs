@@ -42,6 +42,5 @@ pub struct UpdateStaffRequest {
     pub full_name: Option<String>,
     #[validate(length(max = 128))]
     pub designation: Option<String>,
-    #[validate(regex = "STATUS_REGEX")]
     pub status: Option<String>,
 }
