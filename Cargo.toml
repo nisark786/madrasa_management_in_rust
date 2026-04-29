@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "apps/api",
-  "apps/web",
   "crates/shared",
   "crates/db"
 ]

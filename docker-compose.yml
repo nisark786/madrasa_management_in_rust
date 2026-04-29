@@ -45,34 +45,6 @@ services:
         - action: rebuild
           path: ./crates/db/Cargo.toml
 
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-    container_name: madrasa_web
-    environment:
-      WEB_PORT: 3000
-      RUST_LOG: info
-    ports:
-      - "3000:3000"
-    depends_on:
-      api:
-        condition: service_started
-    develop:
-      watch:
-        - action: sync+restart
-          path: ./apps/web/src
-          target: /app/apps/web/src
-        - action: sync+restart
-          path: ./crates/shared/src
-          target: /app/crates/shared/src
-        - action: rebuild
-          path: ./Cargo.toml
-        - action: rebuild
-          path: ./apps/web/Cargo.toml
-        - action: rebuild
-          path: ./crates/shared/Cargo.toml
-
   postgres:
     image: postgres:16
     container_name: madrasa_postgres
@@ -108,8 +80,6 @@ services:
     image: nginx:1.27-alpine
     container_name: madrasa_nginx
     depends_on:
-      web:
-        condition: service_started
       api:
         condition: service_started
     ports:
