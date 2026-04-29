@@ -76,10 +76,21 @@ services:
       timeout: 5s
       retries: 5
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: madrasa_frontend
+    depends_on:
+      api:
+        condition: service_started
+
   nginx:
     image: nginx:1.27-alpine
     container_name: madrasa_nginx
     depends_on:
+      frontend:
+        condition: service_started
       api:
         condition: service_started
     ports:
