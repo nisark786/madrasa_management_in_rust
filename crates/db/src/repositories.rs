@@ -34,6 +34,21 @@ pub async fn get_user_by_email(pool: &PgPool, tenant_id: Uuid, email: &str) -> R
     .await
 }
 
+pub async fn get_user_by_email_global(pool: &PgPool, email: &str) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as::<_, User>(
+        r#"
+        select id, tenant_id, email, password_hash, role, is_active, created_at, updated_at
+        from users
+        where email = $1
+        order by created_at asc
+        limit 1
+        "#,
+    )
+    .bind(email)
+    .fetch_optional(pool)
+    .await
+}
+
 pub async fn get_user_by_id(pool: &PgPool, tenant_id: Uuid, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
     sqlx::query_as::<_, User>(
         r#"

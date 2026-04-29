@@ -8,7 +8,6 @@ pub struct LoginRequest {
     pub email: String,
     #[validate(length(min = 6, message = "password must be at least 6 characters"))]
     pub password: String,
-    pub tenant_slug: String,
 }
 
 #[derive(Debug, Serialize)]

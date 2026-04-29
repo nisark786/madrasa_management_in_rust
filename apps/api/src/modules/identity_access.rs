@@ -3,7 +3,7 @@ mod service;
 
 use axum::{extract::State, routing::{get, post}, Json, Router};
 use std::sync::Arc;
-use db::repositories::{create_audit_log, get_tenant_by_slug, get_user_by_email};
+use db::repositories::{create_audit_log, get_tenant_by_slug, get_user_by_email, get_user_by_email_global};
 use redis::AsyncCommands;
 use shared::auth::Role;
 use uuid::Uuid;
@@ -30,19 +30,23 @@ async fn login(
         .validate()
         .map_err(|e| AppError::Validation(e.to_string()))?;
 
-    let tenant = get_tenant_by_slug(&state.pg_pool, &payload.tenant_slug)
+    let user = get_user_by_email_global(&state.pg_pool, &payload.email)
         .await
         .map_err(|_| AppError::Db)?
         .ok_or(AppError::Unauthorized)?;
+
+    let tenant = sqlx::query_as::<_, db::models::Tenant>(
+        "select id, name, slug, is_active, created_at, updated_at from tenants where id = $1",
+    )
+    .bind(user.tenant_id)
+    .fetch_optional(&state.pg_pool)
+    .await
+    .map_err(|_| AppError::Db)?
+    .ok_or(AppError::Unauthorized)?;
 
     if !tenant.is_active {
         return Err(AppError::Forbidden);
     }
-
-    let user = get_user_by_email(&state.pg_pool, tenant.id, &payload.email)
-        .await
-        .map_err(|_| AppError::Db)?
-        .ok_or(AppError::Unauthorized)?;
 
     if !user.is_active || !verify_password(&user.password_hash, &payload.password) {
         return Err(AppError::Unauthorized);
