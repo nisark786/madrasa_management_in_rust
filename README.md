@@ -39,6 +39,19 @@ Initial project foundation is created:
 docker compose up -d postgres redis
 ```
 
+## Codespaces Docker watch (instant change detection)
+
+Use Docker Compose watch mode so source changes auto-sync and restart containers:
+
+```bash
+docker compose up --build --watch
+```
+
+Notes:
+- `apps/api/src`, `apps/web/src`, `crates/shared/src`, and `crates/db/src` are already configured under `develop.watch` in `docker-compose.yml`.
+- Source code changes restart services quickly.
+- `Cargo.toml` changes trigger image rebuild automatically.
+
 ## API bootstrap flow
 
 1. Create first tenant + platform admin user:
